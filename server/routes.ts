@@ -1,0 +1,390 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertResumeSchema, insertCompanyInsightsSchema, insertInterviewSessionSchema, insertUserSchema } from "@shared/schema";
+import { createAIProvider } from "./ai-service";
+import multer from "multer";
+import { db } from "./db";
+import { resumes, interviews, type NewResume, type NewInterview } from "./db/schema";
+import { eq } from "drizzle-orm";
+
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
+});
+
+let globalAIProvider = createAIProvider();
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // New Neon DB routes
+  app.post('/api/save-resume', async (req: Request, res: Response) => {
+    try {
+      const { userEmail, rawText, skills, experience, achievements } = req.body;
+      
+      if (!userEmail || !rawText) {
+        return res.status(400).json({ error: 'userEmail and rawText are required' });
+      }
+
+      const newResume: NewResume = {
+        userEmail,
+        rawText: rawText.replace(/\u0000/g, ''),
+        skills: skills || [],
+        experience: experience || '',
+        achievements: achievements || [],
+      };
+
+      const result = await db.insert(resumes).values(newResume).returning();
+      
+      res.json({ 
+        message: 'Resume saved successfully', 
+        resume: result[0] 
+      });
+    } catch (error) {
+      console.error('Save resume error:', error);
+      res.status(500).json({ error: 'Failed to save resume' });
+    }
+  });
+
+  app.post('/api/save-interview', async (req: Request, res: Response) => {
+    try {
+      const { userEmail, question, answer, score, feedback } = req.body;
+      
+      if (!userEmail || !question || !answer) {
+        return res.status(400).json({ error: 'userEmail, question, and answer are required' });
+      }
+
+      const newInterview: NewInterview = {
+        userEmail,
+        question,
+        answer,
+        score: score || null,
+        feedback: feedback || null,
+      };
+
+      const result = await db.insert(interviews).values(newInterview).returning();
+      
+      res.json({ 
+        message: 'Interview data saved successfully', 
+        interview: result[0] 
+      });
+    } catch (error) {
+      console.error('Save interview error:', error);
+      res.status(500).json({ error: 'Failed to save interview data' });
+    }
+  });
+
+  // Get user's resumes
+  app.get('/api/resumes/:userEmail', async (req: Request, res: Response) => {
+    try {
+      const { userEmail } = req.params;
+      const userResumes = await db.select().from(resumes).where(eq(resumes.userEmail, userEmail));
+      
+      res.json(userResumes);
+    } catch (error) {
+      console.error('Get resumes error:', error);
+      res.status(500).json({ error: 'Failed to fetch resumes' });
+    }
+  });
+
+  // Get user's interviews
+  app.get('/api/interviews/:userEmail', async (req: Request, res: Response) => {
+    try {
+      const { userEmail } = req.params;
+      const userInterviews = await db.select().from(interviews).where(eq(interviews.userEmail, userEmail));
+      
+      res.json(userInterviews);
+    } catch (error) {
+      console.error('Get interviews error:', error);
+      res.status(500).json({ error: 'Failed to fetch interviews' });
+    }
+  });
+
+  // Delete resume route
+  app.delete('/api/resume/:id', async (req: Request, res: Response) => {
+    try {
+      const resumeId = parseInt(req.params.id);
+      
+      if (isNaN(resumeId)) {
+        return res.status(400).json({ error: 'Invalid resume ID' });
+      }
+
+      // Delete the resume
+      const deletedResume = await db.delete(resumes).where(eq(resumes.id, resumeId)).returning();
+      
+      if (deletedResume.length === 0) {
+        return res.status(404).json({ error: 'Resume not found' });
+      }
+      
+      res.json({ 
+        message: 'Resume deleted successfully', 
+        resume: deletedResume[0] 
+      });
+    } catch (error) {
+      console.error('Delete resume error:', error);
+      res.status(500).json({ error: 'Failed to delete resume' });
+    }
+  });
+
+  // Simplified API routes - AI providers are configured via environment variables
+  app.get('/api/user/available-providers', async (req: Request, res: Response) => {
+    try {
+      const providers = [];
+      
+      if (process.env.GEMINI_API_KEY) {
+        providers.push('gemini');
+      }
+      if (process.env.OPENROUTER_API_KEY) {
+        providers.push('openrouter');
+      }
+      
+      res.json({ 
+        providers, 
+        current: providers.length > 0 ? providers[0] : 'none',
+        supported: ['gemini', 'openrouter']
+      });
+    } catch (error) {
+      console.error('Get providers error:', error);
+      res.status(500).json({ error: 'Failed to get available providers' });
+    }
+  });
+
+  app.post('/api/assistant/suggest', async (req: Request, res: Response) => {
+    try {
+      const { context, conversation, userProfile } = req.body;
+      
+      const suggestions = await globalAIProvider.generateSuggestions(context, conversation, userProfile);
+      res.json(suggestions);
+    } catch (error) {
+      console.error('Assistant suggestions error:', error);
+      res.status(500).json({ error: 'Failed to generate suggestions' });
+    }
+  });
+
+  app.post('/api/resume/upload', upload.single('resume'), async (req: MulterRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const fs = await import('fs');
+      const fileContent = fs.readFileSync(req.file.path, 'utf-8');
+      
+      const analysis = await globalAIProvider.analyzeResume(fileContent);
+      
+      const resumeData = {
+        userId: 1,
+        filename: req.file.originalname,
+        content: fileContent,
+        skills: analysis.skills || [],
+        experience: analysis.experience || '',
+        achievements: analysis.achievements || []
+      };
+
+      const validatedData = insertResumeSchema.parse(resumeData);
+      const resume = await storage.createResume(validatedData);
+      
+      fs.unlinkSync(req.file.path);
+      
+      res.json(resume);
+    } catch (error) {
+      console.error('Resume upload error:', error);
+      res.status(500).json({ error: 'Failed to process resume' });
+    }
+  });
+
+  app.get('/api/resume/user/:userId', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const resume = await storage.getResumeByUserId(userId);
+      
+      if (!resume) {
+        return res.status(404).json({ error: 'Resume not found' });
+      }
+      
+      res.json(resume);
+    } catch (error) {
+      console.error('Get resume error:', error);
+      res.status(500).json({ error: 'Failed to fetch resume' });
+    }
+  });
+
+  app.post('/api/company/research', async (req: Request, res: Response) => {
+    try {
+      const { companyName, position } = req.body;
+      
+      if (!companyName || !position) {
+        return res.status(400).json({ error: 'Company name and position are required' });
+      }
+
+      const existing = await storage.getCompanyInsights(companyName, position);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      const research = await globalAIProvider.researchCompany(companyName, position);
+      
+      const insightsData = {
+        companyName,
+        position,
+        culture: research.culture || '',
+        mission: research.mission || '',
+        recentNews: research.recentNews || '',
+        requiredSkills: research.requiredSkills || [],
+        insights: research
+      };
+
+      const validatedData = insertCompanyInsightsSchema.parse(insightsData);
+      const insights = await storage.createCompanyInsights(validatedData);
+      
+      res.json(insights);
+    } catch (error) {
+      console.error('Company research error:', error);
+      res.status(500).json({ error: 'Failed to research company' });
+    }
+  });
+
+  app.post('/api/interview/start', async (req: Request, res: Response) => {
+    try {
+      const { userId, companyName, position, resumeId } = req.body;
+      
+      const resume = await storage.getResumeByUserId(userId);
+      
+      const questionData = await globalAIProvider.generateInterviewQuestions(
+        companyName,
+        position,
+        resume?.skills || [],
+        resume?.experience || 'Entry level'
+      );
+      
+      const sessionData = {
+        userId,
+        companyName,
+        position,
+        questions: questionData.questions || [],
+        responses: [],
+        feedback: {},
+        completed: false
+      };
+
+      const validatedData = insertInterviewSessionSchema.parse(sessionData);
+      const session = await storage.createInterviewSession(validatedData);
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Start interview error:', error);
+      res.status(500).json({ error: 'Failed to start interview session' });
+    }
+  });
+
+  app.post('/api/interview/:sessionId/response', async (req: Request, res: Response) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { questionId, response } = req.body;
+      
+      const session = await storage.getInterviewSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Interview session not found' });
+      }
+
+      const questionText = Array.isArray(session.questions) 
+        ? session.questions.find((q: any) => q.id === questionId)?.text || 'Unknown question'
+        : 'Unknown question';
+      
+      const feedback = await globalAIProvider.evaluateResponse(questionText, response);
+      
+      const updatedResponses = [...(session.responses as any[] || []), {
+        questionId,
+        response,
+        feedback,
+        timestamp: new Date().toISOString()
+      }];
+
+      const updatedSession = await storage.updateInterviewSession(sessionId, {
+        responses: updatedResponses
+      });
+      
+      res.json({ feedback, session: updatedSession });
+    } catch (error) {
+      console.error('Submit response error:', error);
+      res.status(500).json({ error: 'Failed to submit response' });
+    }
+  });
+
+  app.get('/api/interview/sessions/:userId', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const sessions = await storage.getInterviewSessionsByUser(userId);
+      res.json(sessions);
+    } catch (error) {
+      console.error('Get sessions error:', error);
+      res.status(500).json({ error: 'Failed to fetch interview sessions' });
+    }
+  });
+
+  app.get('/api/interview/session/:sessionId', async (req: Request, res: Response) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const session = await storage.getInterviewSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Interview session not found' });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Get session error:', error);
+      res.status(500).json({ error: 'Failed to fetch interview session' });
+    }
+  });
+
+  app.post('/api/interview/:sessionId/complete', async (req: Request, res: Response) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      
+      const session = await storage.getInterviewSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Interview session not found' });
+      }
+
+      const updatedSession = await storage.updateInterviewSession(sessionId, {
+        completed: true
+      });
+      
+      res.json(updatedSession);
+    } catch (error) {
+      console.error('Complete session error:', error);
+      res.status(500).json({ error: 'Failed to complete interview session' });
+    }
+  });
+
+  app.get('/api/health', async (req: Request, res: Response) => {
+    try {
+      const providers = [];
+      
+      if (process.env.GEMINI_API_KEY) {
+        providers.push('gemini');
+      }
+      if (process.env.OPENROUTER_API_KEY) {
+        providers.push('openrouter');
+      }
+      
+      res.json({ 
+        status: 'healthy', 
+        providers,
+        supportedProviders: ['gemini', 'openrouter'],
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(500).json({ error: 'Health check failed' });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

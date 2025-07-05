@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 0%);
+  --foreground: hsl(0, 0%, 100%);
+  --muted: hsl(0, 0%, 5%);
+  --muted-foreground: hsl(0, 0%, 70%);
+  --popover: hsl(0, 0%, 0%);
+  --popover-foreground: hsl(0, 0%, 100%);
+  --card: hsl(0, 0%, 0%);
+  --card-foreground: hsl(0, 0%, 100%);
+  --border: hsl(0, 0%, 15%);
+  --input: hsl(0, 0%, 8%);
+  --primary: hsl(0, 84%, 60%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(0, 0%, 8%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --accent: hsl(0, 0%, 8%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(0, 84%, 60%);
+  --radius: 0rem;
+  --chart-1: hsl(0, 0%, 80%);
+  --chart-2: hsl(0, 0%, 60%);
+  --chart-3: hsl(0, 0%, 40%);
+  --chart-4: hsl(0, 0%, 20%);
+  --chart-5: hsl(0, 0%, 10%);
+}
+
+.dark {
+  --background: hsl(0, 0%, 0%);
+  --foreground: hsl(0, 0%, 100%);
+  --muted: hsl(0, 0%, 4%);
+  --muted-foreground: hsl(0, 0%, 60%);
+  --popover: hsl(0, 0%, 0%);
+  --popover-foreground: hsl(0, 0%, 100%);
+  --card: hsl(0, 0%, 0%);
+  --card-foreground: hsl(0, 0%, 100%);
+  --border: hsl(0, 0%, 10%);
+  --input: hsl(0, 0%, 6%);
+  --primary: hsl(0, 0%, 100%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(0, 0%, 6%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --accent: hsl(0, 0%, 6%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 0%, 100%);
+  --destructive-foreground: hsl(0, 0%, 0%);
+  --ring: hsl(0, 0%, 100%);
+  --radius: 0rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-mono antialiased bg-background text-foreground;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+  }
+
+  /* Nothing OS dotted patterns */
+  .nothing-dots {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
+    background-size: 8px 8px;
+  }
+
+  .nothing-grid {
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Minimal animations */
+  .nothing-pulse {
+    animation: nothing-pulse 3s ease-in-out infinite;
+  }
+
+  .nothing-fade-in {
+    animation: nothing-fade-in 0.3s ease-out;
+  }
+
+  .nothing-border {
+    border: 1px solid currentColor;
+    border-opacity: 0.1;
+  }
+
+  /* Typography */
+  h1, h2, h3 {
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 1px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: currentColor;
+    opacity: 0.2;
+  }
+
+  /* Form inputs */
+  input, textarea, select {
+    font-family: inherit;
+    font-weight: 300;
+  }
+
+  /* Buttons */
+  button {
+    font-family: inherit;
+    font-weight: 400;
+    transition: all 0.15s ease;
+  }
+
+  /* Cards */
+  .nothing-card {
+    border: 1px solid currentColor;
+    border-opacity: 0.08;
+    background: transparent;
+    backdrop-filter: blur(20px);
+  }
+}
+
+@keyframes nothing-pulse {
+  0%, 100% { 
+    opacity: 1; 
+  }
+  50% { 
+    opacity: 0.6; 
+  }
+}
+
+@keyframes nothing-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

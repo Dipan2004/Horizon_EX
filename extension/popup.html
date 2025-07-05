@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizon - AI Interview Assistant</title>
+    <style>
+        /* Tailwind CSS classes inline for the extension */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 400px;
+            height: 600px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            overflow: hidden;
+        }
+
+        .container {
+            padding: 16px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 16px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #1e293b;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            background: #334155;
+            border-color: #3b82f6;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .feature-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #10b981;
+        }
+
+        .status-inactive {
+            background: #f59e0b;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #374151;
+            color: #e5e7eb;
+            border: 1px solid #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 12px;
+            border-top: 1px solid #334155;
+            background: #1e293b;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .recording-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            background: #dc2626;
+            color: white;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .suggestions {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .suggestion-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-label {
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Horizon</div>
+            <div class="subtitle">AI Interview Assistant</div>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="section-title">
+                    <span class="status-indicator status-inactive"></span>
+                    Real-time Assistant
+                </div>
+                <div class="quick-actions">
+                    <button class="btn btn-primary" id="startAssistant">Start</button>
+                    <button class="btn btn-secondary" id="stopAssistant">Stop</button>
+                </div>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card" data-feature="resume">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-title">Resume Upload</div>
+                </div>
+                <div class="feature-card" data-feature="practice">
+                    <div class="feature-icon">🎯</div>
+                    <div class="feature-title">Mock Interview</div>
+                </div>
+                <div class="feature-card" data-feature="research">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">Company Research</div>
+                </div>
+                <div class="feature-card" data-feature="history">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">History</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Quick Tips</div>
+                <div class="suggestions">
+                    <div class="suggestion-item">
+                        <div class="suggestion-label">✓ Be Specific</div>
+                        Use concrete examples from your experience
+                    </div>
+                    <div class="suggestion-item">
+                        <div class="suggestion-label">✓ STAR Method</div>
+                        Situation, Task, Action, Result format
+                    </div>
+                    <div class="suggestion-item">
+                        <div class="suggestion-label">✓ Ask Questions</div>
+                        Show interest in the role and company
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-text">
+                Click features above to practice • v1.0.0
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Extension functionality
+        let isRecording = false;
+        let recognition = null;
+
+        // Check if browser supports speech recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+        }
+
+        // DOM elements
+        const startBtn = document.getElementById('startAssistant');
+        const stopBtn = document.getElementById('stopAssistant');
+        const statusIndicator = document.querySelector('.status-indicator');
+        const sectionTitle = document.querySelector('.section-title');
+        const featureCards = document.querySelectorAll('.feature-card');
+
+        // Event listeners
+        startBtn.addEventListener('click', startAssistant);
+        stopBtn.addEventListener('click', stopAssistant);
+
+        featureCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const feature = card.dataset.feature;
+                handleFeatureClick(feature);
+            });
+        });
+
+        function startAssistant() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+
+            isRecording = true;
+            statusIndicator.classList.remove('status-inactive');
+            statusIndicator.classList.add('status-active');
+            sectionTitle.innerHTML = '<span class="status-indicator status-active"></span>Real-time Assistant - Active';
+            
+            // Add recording indicator
+            const recordingDiv = document.createElement('div');
+            recordingDiv.className = 'recording-indicator pulse';
+            recordingDiv.innerHTML = '🎙️ Listening...';
+            recordingDiv.id = 'recording-indicator';
+            document.querySelector('.content').prepend(recordingDiv);
+
+            recognition.start();
+            console.log('Assistant started');
+        }
+
+        function stopAssistant() {
+            isRecording = false;
+            statusIndicator.classList.remove('status-active');
+            statusIndicator.classList.add('status-inactive');
+            sectionTitle.innerHTML = '<span class="status-indicator status-inactive"></span>Real-time Assistant';
+            
+            // Remove recording indicator
+            const recordingIndicator = document.getElementById('recording-indicator');
+            if (recordingIndicator) {
+                recordingIndicator.remove();
+            }
+
+            if (recognition) {
+                recognition.stop();
+            }
+            console.log('Assistant stopped');
+        }
+
+        function handleFeatureClick(feature) {
+            console.log('Feature clicked:', feature);
+            
+            // Show feature info
+            const suggestions = document.querySelector('.suggestions');
+            
+            switch(feature) {
+                case 'resume':
+                    suggestions.innerHTML = `
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">📄 Resume Upload</div>
+                            Upload your resume to analyze skills and experience
+                        </div>
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">🎯 Smart Analysis</div>
+                            AI extracts key skills and achievements automatically
+                        </div>
+                    `;
+                    break;
+                case 'practice':
+                    suggestions.innerHTML = `
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">🎯 Mock Interview</div>
+                            Practice with AI-generated interview questions
+                        </div>
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">📊 Get Feedback</div>
+                            Receive detailed feedback on your responses
+                        </div>
+                    `;
+                    break;
+                case 'research':
+                    suggestions.innerHTML = `
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">🔍 Company Research</div>
+                            Get insights about company culture and mission
+                        </div>
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">💼 Role Analysis</div>
+                            Understand required skills for the position
+                        </div>
+                    `;
+                    break;
+                case 'history':
+                    suggestions.innerHTML = `
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">📊 Track Progress</div>
+                            View your interview history and improvements
+                        </div>
+                        <div class="suggestion-item">
+                            <div class="suggestion-label">📈 Performance Metrics</div>
+                            Analyze your interview performance over time
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        // Speech recognition event handlers
+        if (recognition) {
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                
+                if (event.results[event.resultIndex].isFinal) {
+                    console.log('Final transcript:', transcript);
+                    // Here you would send the transcript to the AI service
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+
+            recognition.onend = () => {
+                if (isRecording) {
+                    recognition.start(); // Restart if still recording
+                }
+            };
+        }
+
+        // Initialize extension
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Horizon Chrome Extension loaded');
+        });
+    </script>
+</body>
+</html>
