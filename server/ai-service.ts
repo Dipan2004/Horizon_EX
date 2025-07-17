@@ -7,6 +7,9 @@ export interface AIProvider {
     experience: string;
     achievements: string[];
   }>;
+
+
+
   
   researchCompany(companyName: string, position: string): Promise<{
     culture: string;
