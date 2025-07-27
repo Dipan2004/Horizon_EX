@@ -14,14 +14,14 @@ interface MulterRequest extends Request {
 
 const upload = multer({ 
   dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 let globalAIProvider = createAIProvider();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // New Neon DB routes
+ 
   app.post('/api/save-resume', async (req: Request, res: Response) => {
     try {
       const { userEmail, rawText, skills, experience, achievements } = req.body;
