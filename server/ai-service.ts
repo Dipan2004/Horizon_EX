@@ -621,7 +621,8 @@ Provide suggestions in JSON format: {"keyPoints": [], "followUpSuggestions": [],
   }
 }
 
-// Factory function to create the appropriate AI provider
+
+
 export function createAIProvider(): AIProvider {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -637,3 +638,5 @@ export function createAIProvider(): AIProvider {
     return new GeminiProvider('');
   }
 }
+
+
